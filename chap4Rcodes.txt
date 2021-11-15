@@ -1,0 +1,224 @@
+KW.test=function(m1=5,m2=5,m3=4,Hvalue=9.4114){
+# this program is for m1=5, m2=5, and m3 can be any integer
+m<-m1+m2+m3;Jh5=function(m){a<-rep(0,5)
+for (i in 1:(m-4)){for (j in (i+1):(m-3)){
+for (k in (j+1):(m-2)){for (l in (k+1):(m-1))
+{for (f in (l+1):m){a<-rbind(a,c(i,j,k,l,f))}}}}}
+a[2:nrow(a),]}
+JTid1<-Jh5(m1+m2+m3);n1<-nrow(JTid1);JTid2<-Jh5(m2+m3);
+n2<-nrow(JTid2);nn<-n1*n2;const<-1:m;y<-0
+for (i in 1:n1){for (j in 1:n2){temp1<-c(JTid1[i,]);
+temp2<-(const[-temp1])[c(JTid2[j,])];
+temp3<-const[-c(temp1,temp2)];
+y<-c(y,12/(m*(m+1))*((sum(temp1))^2/m1+(sum(temp2))^2/m2+
+(sum(temp3))^2/m3)-3*(m+1))}}
+y<-y[2:(nn+1)];pvalue<-(sum(y>=Hvalue))/nn;
+y<-sort(y);aaa<-aa<-y[1];tempc<-1
+for (i in 2:nn){if ((y[i]-aa)>10^{-12})
+{aaa<-c(aaa,y[i]);aa<-y[i];tempc<-c(tempc,1-(i-1)/nn)}}
+out<-cbind(aaa,tempc);z=seq(0,12,0.1);par(mfrow=c(1,2));
+hist(y,main="(1) Kruskal-Wallis检验精确分布直方图");
+plot(z,dchisq(z,df=2),type="l",main="(2) 自由度为2的chisq分布密度函数");
+list(c("(m1,m2,m3)"=c(m1,m2,m3),"H"=Hvalue,"pval"=pvalue),out)}
+
+
+JT.test=function(m1=5,m2=5,m3=4,JTvalue=59){
+# this program is for m1=5, m2=5, and m3 can be any integer
+m<-m1+m2+m3;Jh5=function(m){a=rep(0,5)
+for (i in 1:(m-4)){ for (j in (i+1):(m-3)){
+for (k in (j+1):(m-2)){for (l in (k+1):(m-1)){
+for (f in (l+1):m){a<-rbind(a,c(i,j,k,l,f))}}}}}
+a[2:nrow(a),]};JTid1=Jh5(m1+m2+m3);n1=nrow(JTid1)
+JTid2=Jh5(m2+m3);n2=nrow(JTid2);const=1:m;JT=rep(0,n1*n2)
+for (i in 1:n1){for (j in 1:n2){ temp1<-c(JTid1[i,]);
+temp2=(const[-temp1])[c(JTid2[j,])];temp3=const[-c(temp1,temp2)];
+JT[j+(i-1)*n2]<-sum(outer(temp2,temp1,">"))+
+sum(outer(temp3,temp1,">"))+sum(outer(temp3,temp2,">"))}}
+y=JT;pval=(sum(y>=JTvalue))/(n1*n2);hist(y,breaks=min(y):max(y))
+z=c(0,hist(y,breaks=min(y):max(y))$counts)
+list("(m1,m2,m3)"=c(m1,m2,m3),c(JTvalue,pval),
+cbind(min(y):max(y),z,rev(cumsum(rev(z)))/(n1*n2)))}
+
+
+d=read.table("D:/data/wtloss.txt")
+U=matrix(0,3,3);k=max(d[,2]);for(i in 1:(k-1))for(j in (i+1):k)
+U[i,j]=sum(outer(d[d[,2]==i,1],d[d[,2]==j,1],"-")<0)+
+sum(outer(d[d[,2]==i,1],d[d[,2]==j,1],"-")==0)/2;J=sum(U);
+ni=NULL;for(i in 1:k)ni=c(ni,sum(d[,2]==i));N=sum(ni);
+Z=(J-(N^2-sum(ni^2))/4)/sqrt((N^2*(2*N+3)-
+sum(ni^2*(2*ni+3)))/72);
+
+
+
+Friedman=function(k=3,b=4,W0=0.8125){
+perm=function(n=4){A=rbind(c(1,2),c(2,1));
+if (n>=3){for (i in 3:n){temp=cbind(rep(i,nrow(A)),A);
+for (j in (1:(i-2))){
+temp=rbind(temp,cbind(A[,1:j],rep(i,nrow(A)),A[,(j+1):(i-1)]))};
+temp=rbind(temp,cbind(A,rep(i,nrow(A))));A=temp};};A}
+B=perm(k); # all possible permutations
+nn=nrow(B);ind=rep(1:nn,each=nn^(b-1));for (i in 1:(b-1)){
+ind=cbind(ind,rep(rep(1:nn,each=nn^(b-1-i)),nn^(i)))};
+nn=nrow(ind);y=rep(0,nn);
+for (i in 1:nn){R=apply(B[ind[i,],],2,sum);
+y[i]=12/(b*k*(k+1))*sum(R^2)-3*b*(k+1)};
+y0=sort(unique(y));ycnt=ydnt=NULL;
+for (i in 1:length(y0)){ydnt=c(ydnt,length(y[y==y0[i]]));
+ycnt=c(ycnt,length(y[y>=y0[i]]))};
+plot(y0,ydnt/nn,cex=0.5,ylab="density function",
+xlab="values of the Friedman statistics");
+for (i in 1:length(y0))
+points(c(y0[i],y0[i]),c(ydnt[i]/nn,0),type="l",lwd=2);
+list(t(cbind(W=y0/b/(k-1),Q=y0,density=ydnt/nn,pvalue=ycnt/nn)),
+Pvalue=length(y[y>=(b*(k-1)*W0)])/nn)}
+
+
+
+X=read.table("D:\\data\\blead.txt")
+X=t(X);Y=apply(X,2,rank);R=apply(Y,1,sum);k=nrow(X);b=ncol(X);
+Q=12/(b*k*(k+1))*sum(R^2)-3*b*(k+1);Q
+
+d=read.table("d:/data/blead.txt");friedman.test(as.matrix(d))
+
+
+d=read.table("D:/data/airp35.txt");
+R=apply(d,2,sum);b=nrow(d);k=ncol(d);
+S=sum((R-b*(k+1)/2)^2);W=12*S/b^2/(k^3-k);Q=W*b*(k-1)
+
+Kendall=function(k=5,b=3,W0=0.733)){
+perm=function(n=4){A=rbind(c(1,2),c(2,1));
+if (n>=3){for (i in 3:n){temp=cbind(rep(i,nrow(A)),A);
+for (j in (1:(i-2))){
+temp=rbind(temp,cbind(A[,1:j],rep(i,nrow(A)),A[,(j+1):(i-1)]))};
+temp=rbind(temp,cbind(A,rep(i,nrow(A))));A=temp};};A}
+B=perm(k); # all possible permutations
+nn=nrow(B);ind=rep(1:nn,each=nn^(b-1));for (i in 1:(b-1)){
+ind=cbind(ind,rep(rep(1:nn,each=nn^(b-1-i)),nn^(i)))};
+nn=nrow(ind);y=rep(0,nn);
+for (i in 1:nn){R=apply(B[ind[i,],],2,sum);
+y[i]=12/(b*k*(k+1))*sum(R^2)-3*b*(k+1)};
+y0=sort(unique(y));ycnt=ydnt=NULL;
+for (i in 1:length(y0)){ydnt=c(ydnt,length(y[y==y0[i]]));
+ycnt=c(ycnt,length(y[y>=y0[i]]))};w0=y0/b/(k-1);
+plot(w0,ydnt/nn,cex=0.5,ylab="density function",
+xlab="Kendall 协同系数");
+for (i in 1:length(y0))
+points(c(w0[i],w0[i]),c(ydnt[i]/nn,0),type="l",lwd=2)
+list(t(cbind(W=w0,Q=y0,density=ydnt/nn,pvalue=ycnt/nn)),
+Pvalue=length(y[y>=(b*(k-1)*W0)])/nn)}
+
+
+d=read.table("D:/data/airp35.txt");R=apply(d,2,sum);
+b=nrow(d);k=ncol(d);S=sum((R-b*(k+1)/2)^2);
+W=12*S/b^2/(k^3-k);pchisq(b*(k-1)*W,k-1,low=F)
+
+
+Cochran=function(){Xpchs=function(n=7,k=5){
+#output(n_1,..,n_k)-all possible combination with n_1+...+n_k=n
+temp=cbind(n:0,0:n);if (k>=3){
+for (j in 3:k){a1=temp[,1:(j-2)];a2=temp[,j-1];temp0=NULL;
+for (i in 1:length(a2)){
+if (j==3) temp0=rbind(temp0,cbind(rep(a1[i],a2[i]+1),a2[i]:0,
+         0:a2[i]))
+if (j>3)  temp0=rbind(temp0,cbind(matrix(rep(a1[i,],a2[i]+1),
+ncol=j-2,byrow=T),a2[i]:0,0:a2[i]))};temp=temp0}};temp}
+Xpchs2=function(n=4,k=2){
+#output: all 0 and 1 columns, with n-k 0s and k- 1s columns
+Xchoose=function(n=4,k=2){if (k==0) aa=NULL
+if (k>=1){aa=matrix(1:n,ncol=1);m=0;
+if(k>1){for(i in 2:k){m=m+1;m1=nrow(aa);
+aa=cbind(matrix(rep(aa,each=n),ncol=m),rep(1:n,m1))
+aa=aa[(aa[,m+1]>aa[,m]),]}}};aa};e01=Xchoose(n,k)
+temp=matrix(0,nrow=nrow(e01),ncol=n);
+for (j in 1:nrow(temp)){if (k==1) temp[j,e01[j]]=1
+if (k>1) temp[j,e01[j,]]=1};temp}
+x=read.table("d:/data/candid320.txt");
+L=apply(x,1,sum);n=nrow(x);k=ncol(x);L=apply(x,1,sum);
+R=apply(x,2,sum);N=sum(R);
+Q0=(k*(k-1)*sum((R-mean(R))^2))/(k*N-sum(L^2));
+Ni=NULL;for (i in 1:k-1) Ni=c(Ni,sum(L==i));Ni=Ni[-1];
+eye0=Xpchs2(k,1);temp0=Xpchs(Ni[1],nrow(eye0));Ri0=temp0%*%eye0;
+prob0=factorial(Ni[1])/apply(factorial(temp0),1,prod)*
+(1/nrow(eye0))^(Ni[1]);
+if (length(Ni)>1){for (i in 2:length(Ni)){
+eye1=Xpchs2(k,i);temp1=Xpchs(Ni[i],nrow(eye1));Ri1=temp1%*%eye1;
+prob1=factorial(Ni[i])/apply(factorial(temp1),1,prod)*
+(1/nrow(eye1))^(Ni[i])
+Ri0=matrix(rep(t(Ri0),nrow(Ri1)),byrow=T,ncol=k)+
+matrix(rep(Ri1,each=nrow(Ri0)),ncol=k)
+prob0=rep(prob0,length(prob1))*rep(prob1,each=length(prob0))}}
+xa=k*(k-1)*apply((Ri0-apply(Ri0,1,mean))^2,1,sum)/(k*N-sum(L^2))
+nn=length(xa);xa0=sort(unique(xa));xacnt=NULL;
+for (i in 1:length(xa0)) xacnt=c(xacnt,length(xa[xa==xa0[i]]));
+plot(xa0,xacnt/nn,cex=0.5,ylab="density function",
+xlab="value of Cochran statistics");
+for (i in 1:length(xa0))
+points(c(xa0[i],xa0[i]),c(xacnt[i]/nn,0),type="l",lwd=2)
+list(unique(xa),cbind(rbind(t(x),L),c(R,N)),Q=Q0,
+Exactp=sum(prob0[(xa>=Q0)]),pvalue=pchisq(Q0,k-1,low=F))}
+
+
+x=read.table("d:/data/candid320.txt");n=apply(x,2,sum);N=sum(n)
+L=apply(x,1,sum);k=dim(x)[2]
+Q=(k*(k-1)*sum((n-mean(n))^2))/(k*N-sum(L^2))
+pvalue=pchisq(Q,k-1,low=F)
+
+
+Page=function(k=3,b=4,L0=55){
+perm=function(n=4){A=rbind(c(1,2),c(2,1));
+if (n>=3){for (i in 3:n){temp=cbind(rep(i,nrow(A)),A);
+for (j in (1:(i-2))){
+temp=rbind(temp,cbind(A[,1:j],rep(i,nrow(A)),A[,(j+1):(i-1)]))};
+temp=rbind(temp,cbind(A,rep(i,nrow(A))));A=temp};};A}
+B=perm(k); # all possible permutations
+nn=nrow(B);ind=rep(1:nn,each=nn^(b-1));for (i in 1:(b-1)){
+ind=cbind(ind,rep(rep(1:nn,each=nn^(b-1-i)),nn^(i)))};
+nn=nrow(ind);y=rep(0,nn);
+for (i in 1:nn){R=apply(B[ind[i,],],2,sum);
+y[i]=sum((1:k)*R)};y0=sort(unique(y));ycnt=NULL;
+for (i in 1:length(y0)) ycnt=c(ycnt, length(y[y==y0[i]]));
+plot(y0,ycnt/nn,cex=0.5,ylab="density function",
+xlab="Page检验统计量");
+for (i in 1:length(y0))
+points(c(y0[i],y0[i]),c(ycnt[i]/nn,0),type="l",lwd=2)
+list(cbind(L=y0,pvalue=ycnt/nn),Pvalue=length(y[y>=L0])/nn)}
+
+
+d=read.table("D:/data/blead1.txt");rd=apply(d,1,rank)
+R=apply(rd,1,sum);L=sum(R*1:length(R));k=dim(d)[2];b=dim(d)[1]
+m=b*k*(k+1)^2/4;s=sqrt(b*(k^3-k)^2/144/(k-1));Z=(L-m)/s
+pvalue=pnorm(Z,low=F)
+
+
+Durbin=function(k=4,t=3,b=4,r=3,D0=6.75){
+B=cbind(c(1,2,3),c(1,3,2),c(2,1,3),c(2,3,1),c(3,1,2),c(3,2,1))
+nn=6^b;Numfunc=function(r,b,nnum){ind=rep(0,b);temp=nnum;
+for (i in 1:b){ind[i]=floor(temp/(6^(b-i)))
+temp=temp-ind[i]*6^(b-i)};ind};
+y=0;for (i in 0:(nn-1)){A=B[,Numfunc(r,b,i)+1]
+R=c(sum(A[1,1:3]),sum(A[2,1:2])+A[1,4],A[3,1]+sum(A[2,3:4]),
+sum(A[3,2:4]))
+y=c(y,12*(k-1)/(r*k*(t^2-1))*sum((R-r*(t+1)/2)^2))};
+y=y[2:length(y)];
+pvalue=sum(y>=D0)/nn;y0=sort(unique(y));ycnt=NULL;
+for (i in 1:length(y0)) ycnt=c(ycnt, length(y[y==y0[i]]));
+plot(y0,ycnt/nn,cex=0.5,ylab="density function",
+xlab="Durbin检验统计量");
+for (i in 1:length(y0))
+points(c(y0[i],y0[i]),c(ycnt[i]/nn,0),type="l",lwd=2)
+list(cbind("k"=k,"b"=b,"r"=r,"t"=t,"pvalue"=pvalue),
+cbind(y0,ycnt))}
+
+
+d=read.table("D:/data/mater.txt");
+k=max(d[,2]);b=max(d[,3]);t=length(d[d[,3]==1,1]);
+r=length(d[d[,2]==1,1]);
+R=d;for(i in 1:b) R[d[,3]==i,1]=rank(d[d[,3]==i,1]);
+RV=NULL;for(i in 1:k) RV=c(RV,sum(R[R[,2]==i,1]));
+D=12*(k-1)/(r*k*(t^2-1))*sum((RV-r*(t+1)/2)^2);
+pvalue.chi=pchisq(D,k-1,low=F)
+
+
+A=sum(R[,1]^2);C=b*t*(t+1)^2/4;
+D=(k-1)*sum((RV-r*(t+1)/2)^2)/(A-C);
+pvalue.chi=pchisq(D,k-1,low=F)

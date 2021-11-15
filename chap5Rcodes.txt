@@ -1,0 +1,77 @@
+x=read.table("d:/data/salary.txt")
+y=x[x[,2]==2,1];x=x[x[,2]==1,1];
+x1=x-median(outer(x,y,"-"))
+xy=cbind(c(x1,y),c(rep(1,length(x)),rep(2,length(y))))
+xy1=xy[order(xy[,1]),];z=xy[,1];n=length(z)
+a1=2:3;b=2:3;
+for(i in seq(1,n,2)){b=b+4;a1=c(a1,b)}
+a2=c(1,a1+2);z=NULL;
+for(i in 1:n)z=c(z,(i-floor(i/2)))
+b=1:2;for( i in seq(1,(n+2-2),2))
+if(z[i]/2!=floor(z[i]/2))
+{z[i:(i+1)]=b;b=b+2};zz=cbind(c(0,0,z[1:(n-2)]),z[1:n])
+if(n==1)R=1;if(n==2)R=c(1,2);
+if(n>2)R=c(a2[1:zz[n,1]],rev(a1[1:zz[n,2]]))
+xy2=cbind(xy1,R);Wx=sum(xy2[xy2[,2]==1,3]);
+Wy=sum(xy2[xy2[,2]==2,3]);
+nx=length(x);ny=length(y);
+Wxy=Wy-0.5*ny*(ny+1);Wyx=Wx-0.5*nx*(nx+1)
+
+
+Wx=sum(xy2[xy2[,2]==1,3]);Wy=sum(xy2[xy2[,2]==2,3])
+nx=length(x);ny=length(y);Wxy=Wy-0.5*ny*(ny+1);
+Wyx=Wx-0.5*nx*(nx+1);pvalue=pwilcox(Wyx,nx,ny)
+
+
+x=read.table("d:/data/salary.txt")
+y=x[x[,2]==2,1];x=x[x[,2]==1,1];
+m=length(x);n=length(y)
+x1=x-median(outer(x,y,"-"))
+xy=cbind(c(x1,y),c(rep(1,length(x)),rep(2,length(y))))
+N=nrow(xy);xy1=cbind(xy[order(xy[,1]),],1:N)
+
+
+R1=xy1[xy1[,2]==1,3];M=sum((R1-(N+1)/2)^2)
+E1=m*(N^2-1)/12;s=sqrt(m*n*(N+1)*(N^2-4)/18)
+Z=(M-E1)/s;pvalue=pnorm(Z,low=F)
+
+
+
+x=read.table("d:/data/salary.txt");y=x[x[,2]==2,1]
+x=x[x[,2]==1,1];x1=x-median(outer(x,y,"-"))
+ansari.test(x1,y,alt="greater")
+
+
+x=read.table("d:/data/salary.txt")
+y=x[x[,2]==2,1];x=x[x[,2]==1,1];m=length(x);n=length(y)
+y1=y+median(outer(x,y,"-"));M=median(c(x,y1))
+xy=cbind(c(abs(x-M),abs(y1-M)),
+    c(rep(1,length(x)),rep(2,length(y))))
+N=nrow(xy);xy1=cbind(xy[order(xy[,1]),],1:N)
+Wx=sum(xy1[xy1[,2]==1,3]);Wyx=Wx-0.5*m*(m+1);
+Wxy=m*n-Wyx;Wy=sum(xy1[xy1[,2]==2,3]);pvalue=pwilcox(Wxy,m,n)
+
+x=read.table("d:/data/salary.txt");
+fligner.test(x[,1],x[,2])
+
+
+x=read.table("d:/data/salary.txt")
+y=x[x[,2]==2,1];x=x[x[,2]==1,1];m=length(x);n=length(y)
+x1=abs(x-mean(x));y1=abs(y-mean(y));xy1=c(x1,y1);xy0=c(x,y)
+xyi=c(rep(1,m),rep(2,n));xy=cbind(xy1,xy0,xyi)
+xy2=cbind(xy[order(xy[,1]),],1:(m+n),(1:(m+n))^2)
+T1=sum(xy2[xy2[,3]==1,5]);T2=sum(xy2[xy2[,3]==2,5])
+R=xy2[,5];meanR=mean(R);
+S=sqrt(m*n*(sum(R^2)-(m+n)*meanR^2)/(m+n)/(m+n-1))
+Zx=(T1-m*meanR)/S;Zy=(T2-n*meanR)/S;
+pvalue=min(pnorm(Zx),pnorm(Zy))
+
+
+d=read.table("D:/data/wtloss.txt");N=nrow(d);k=max(d[,2])
+d2=NULL;for (i in 1:k)d2=rbind(d2,cbind(abs(d[d[,2]==i,1]
+                        -mean(d[d[,2]==i,1])),d[d[,2]==i,1],i))
+d3=cbind(d2[order(d2[,1]),],1:N,(1:N)^2)
+Ti=NULL;for(i in 1:k) Ti=c(Ti,sum(d3[d3[,3]==i,5]))
+ni=NULL;for(i in 1:k) ni=c(ni,nrow(d3[d3[,3]==i,]))
+T=(N-1)*(sum(Ti^2/ni)-sum(Ti)^2/N)/(sum(d3[,5]^2)-sum(Ti)^2/N)
+pvalue=pchisq(T,k-1,low=F)

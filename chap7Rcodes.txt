@@ -1,0 +1,10 @@
+qqplot(qnorm(((1:length(x))-0.5)/20,15,0.04),x);
+z=(x-mean(x))/sd(x);qqnorm(z);qqline(z)
+
+
+z=read.table("D:/ks2.txt",header=F);
+x=z[z[,2]==1,1];y=z[z[,2]==2,1]
+
+Ob=c(490,334,68,16);n=sum(Ob);lambda=t(0:3)%*%Ob/n
+p=exp(-lambda)*lambda^(0:3)/factorial(0:3)
+E=p*n;Q=sum((E-Ob)^2/E);pvalue=pchisq(Q,2,low=F)

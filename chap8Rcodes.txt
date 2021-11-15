@@ -1,0 +1,20 @@
+
+x=read.table("d:/data/stroke.txt");
+p1=x[1,1]/sum(x[1,]);p2=x[2,1]/sum(x[2,]);pdif1=p1-p2;
+se1=sqrt(p1*(1-p1)/sum(x[1,])+p2*(1-p2)/sum(x[2,]))
+pdifc1=c(p1-p2-1.96*se1,p1-p2+1.96*se1)
+rr1=p1/p2;ser1=sqrt((1-p1)/x[1,1]+(1-p2)/x[2,1]);
+rrc1=c(rr1*exp(-1.96*ser1),rr1*exp(1.96*ser1))
+or1=(p1/(1-p1))/(p2/(1-p2));seor1=sqrt(sum(1/x))
+orc1=c(or1*exp(-1.96*seor1),or1*exp(1.96*seor1))
+list(dif=pdif1,difCI=pdifc1,RR=rr1,RRCI=rrc1,OR=or1,ORCI=orc1)
+
+
+data stroke;infile "D:/data/strokeA.txt";
+input count Now$ Before$;run;
+proc freq;tables Now*Before/relrisk;weight count;run;
+
+x=read.table("d:/data/hospital.txt");
+tmp=array(c(x[,4]),dim=c(2,2,4),dimnames=list(effect=c("Y","N"),
+med=c("A","B"),hosptl=c("I", "II","III","IV")));
+tab=ftable(. ~ med+effect,tmp);list(tab,mantelhaen.test(tmp))

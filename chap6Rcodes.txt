@@ -1,0 +1,108 @@
+d=read.table("D:/data/DM1.txt");
+x=d[,2];y=d[,1];rx=rank(x);ry=rank(y);
+rsd=rbind(rx,ry,(rx-ry)^2);cor.test(x,y,meth="spearman")
+
+
+x=c(4.2,4.3,4.4,4.5,4.7,4.6,5.3);y=c(2.6,2.8,3.1,3.8,3.6,4.0,5.0);
+cor.test(x,y,exact=T,method="spearman")
+
+
+d=read.table("D:/data/CPIESI.txt");n=nrow(d);x=d[,2];y=d[,1]
+nc=0;nd=0;n0=0;n=nrow(d);for (i in 1:(n-1))for(j in (i+1):n)
+{nc=nc+((x[j]-x[i])*(y[j]-y[i])>0);
+nd=nd+((x[j]-x[i])*(y[j]-y[i])<0);
+n0=n0+((x[j]-x[i])*(y[j]-y[i])==0)};K=nc-nd;tau=K/choose(n,2)
+
+
+d=read.table("D:/booknp/data/CPIESI.txt");x=d[,1];y=d[,2]
+cor.test(x,y,meth="kendall")
+
+
+xx=read.table("D:\\data\\incsat.txt");x=xx[,1];
+y=xx[,2];w=xx[,3];n1=max(x);n2=max(y);n=sum(w);q=min(n1,n2);
+WW=matrix(w,byrow=T,nrow=n1);Dc=n^2-sum((apply(WW,2,sum))^2);
+Dr=n^2-sum((apply(WW,1,sum))^2);
+Vij=DD=CC=matrix(0,nrow=n1,ncol=n2)
+for (i in 1:n1){for (j in 1:n2){
+CC[i,j]=sum((x>i)*(y>j)*w)+sum((x<i)*(y<j)*w)
+DD[i,j]=sum((x>i)*(y<j)*w)+sum((x<i)*(y>j)*w)
+Vij[i,j]=Dr*sum(WW[i,])+Dc*sum(WW[,j])}}
+nc=sum(WW*CC)/2;nd=sum(WW*DD)/2;taub=2*(nc-nd)/sqrt(Dc*Dr)
+temp=sum(WW*(2*sqrt(Dc*Dr)*(CC-DD)+taub*Vij)^2)-
+   n^3*taub^2*(Dr+Dc)^2
+sigtaub=1/(Dc*Dr)*sqrt(temp);tauc=q*(nc-nd)/(n^2);
+sigtauc=2*q/((q-1)*n^2)*sqrt(sum(WW*(CC-DD)^2)-(nc-nd)^2*4/n);
+list(taub=c(taub=taub,sigtaub=sigtaub,CI95=c(taub-1.96*
+sigtaub,taub+1.96*sigtaub)),tauc=c(tauc=tauc,sigtauc=sigtauc,
+CI95=c(tauc-1.96*sigtauc,tauc+1.96*sigtauc)))
+
+data CPIESI;infile "D:/data/CPIESI.txt";input y x;run;
+proc corr data=CPIESI Kendall;var X Y;run;
+
+xx=read.table("D:\\data\\incsat.txt")
+x=xx[,1];y=xx[,2];w=xx[,3];n1=max(x);n2=max(y);
+WW=matrix(w,byrow=T,nrow=n1);DD=CC=matrix(0,nrow=n1,ncol=n2);
+for (i in 1:n1){for (j in 1:n2){
+CC[i,j]=sum((x>i)*(y>j)*w)+sum((x<i)*(y<j)*w)
+DD[i,j]=sum((x>i)*(y<j)*w)+sum((x<i)*(y>j)*w)}}
+nc=sum(WW*CC)/2;nd=sum(WW*DD)/2;G=(nc-nd)/(nc+nd)
+ASE=1/(nc+nd)^2*sqrt(sum(WW*(2*nd*CC-2*nc*DD)^2))
+pvalue=2*(1-pnorm(G/ASE));CI95=c(G-1.96*ASE,G+1.96*ASE)
+list(G=G,ASE=ASE,CI95=CI95,pvalue=pvalue)
+
+data incsat;infile "D:/data/incsat.txt";input inc sat count;run;
+proc freq;tables inc*sat/measures cl;weight count;run;
+
+xxx=read.table("D:\\data\\incsat.txt")
+x=xx[,1];y=xx[,2];w=xx[,3];
+n1=max(x);n2=max(y);n=sum(w);
+WW=matrix(w,byrow=T,nrow=n1)
+Dc=n^2-sum((apply(WW,2,sum))^2);
+Dr=n^2-sum((apply(WW,1,sum))^2);
+Vij=DD=CC=nRi=nCj=matrix(0,nrow=n1,ncol=n2)
+for (i in 1:n1){for (j in 1:n2){
+CC[i,j]=sum((x>i)*(y>j)*w)+sum((x<i)*(y<j)*w)
+DD[i,j]=sum((x>i)*(y<j)*w)+sum((x<i)*(y>j)*w)
+Vij[i,j]=Dr*sum(WW[i,])+Dc*sum(WW[,j])
+nRi[i,j]=n-sum(WW[i,]);nCj[i,j]=n-sum(WW[,j])}}
+nc=sum(WW*CC)/2;nd=sum(WW*DD)/2;taub=2*(nc-nd)/sqrt(Dc*Dr)
+temp=sum(WW*(2*sqrt(Dc*Dr)*(CC-DD)+taub*Vij)^2)-
+     n^3*taub^2*(Dr+Dc)^2;
+sigtaub=1/(Dc*Dr)*sqrt(temp);
+dCR=2*(nc-nd)/Dr;dRC=2*(nc-nd)/Dc;d=4*(nc-nd)/(Dc+Dr);
+sigdCR=2/Dr^2*sqrt(sum(WW*(Dr*(CC-DD)-2*(nc-nd)*nRi)^2))
+sigdRC=2/Dc^2*sqrt(sum(WW*(Dc*(CC-DD)-2*(nc-nd)*nCj)^2))
+sigd=sqrt(2*sigtaub^2/(Dc+Dr)*sqrt(Dc*Dr));z=1.96;
+list(dCR=c(dCR=dCR,sigdCR=sigdCR,
+CI95=c(dCR-z*sigdCR,dCR+z*sigdCR)),
+dRC=c(dRC=dRC,sigdRC=sigdRC,CI95=c(dRC-z*sigdRC,dRC+z*sigdRC)),
+d=c(d=d,sigd=sigd,CI95=c(d-z*sigd,d+z*sigd)))
+
+d=read.table("D:/data/CPIGINI.txt",header=T);
+x=d[,1];y=d[,2];n=nrow(d)
+s=NULL;for(i in 1:(n-1))for(j in (i+1):n)
+                s=c(s,(y[j]-y[i])/(x[j]-x[i]))
+b=median(s);a=median(y-b*x);e=y-a-b*x;coef=c(a,b)
+
+
+example.ci=function(){
+d=read.table("D:/data/CPIGINI.txt",header=T);
+x=d[,1];y=d[,2];
+TT=function(x,y,alpha){n=length(x);s=NULL
+for(i in 1:(n-1))for(j in (i+1):n)s=c(s,(y[j]-y[i])/(x[j]-x[i]));
+b=median(s);a=median(y-b*x); e=y-a-b*x; m=length(s);s=sort(s);
+z=NULL;for(i in 1:m)
+z=c(z,cor.test(x,y-s[i]*x,method="kendall")$p.value)
+for (i in 1:floor(m/2)) if (z[i]>alpha/2)
+{bound=c(i-1,m-i+2,s[i-1],s[m-(i-2)],s[i-1]);break}
+list(nrow(d),coefficient=c(a,b),residual=e,ci=bound[1:4],
+confid=1-2*bound[5])}
+list(TT(x,y,0.05))}
+
+
+W=read.table("D:/data/CPIGINI.txt",header=T);
+fit=mblm(GINI~CPI,W);summary(fit);anova(fit);confint(fit)
+
+
+lms=lqs(Y~X,method="lms");lts=lqs(Y~X,method="lts");
+se=lqs(Y~X,method="S")

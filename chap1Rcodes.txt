@@ -1,0 +1,14 @@
+
+x=rnorm(500)
+y=rexp(500,1)
+par(mfrow=c(2,3))
+hist(x,main="a. Histogram of x")
+boxplot(x,main="b. Boxplot of x")
+qqnorm(x,main="c. Normal Q-Q Plot of x")
+hist(y,main="d. Histogram of y")
+boxplot(y,main="e. Boxplot of y")
+qqnorm(y,main="f. Normal Q-Q Plot of y")
+
+x=c(rep(100,6), rep(99,4));
+y=c(50,0);t.test(x,mu=100,alt="less")
+test(y,mu=100,alt="less")+) 

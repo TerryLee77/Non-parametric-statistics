@@ -1,0 +1,63 @@
+sign.test=function(x,p,q0)
+{s1=sum(x<q0);s2=sum(x>q0);n=s1+s2
+p1=pbinom(s1,n,p);p2=1-pbinom(s1-1,n,p)
+if (p1>p2)m1="One tail test: H1: Q>q0"
+    else m1="One tail test: H1: Q<q0"
+p.value=min(p1,p2);m2="Two tails test";p.value2=2*p.value
+if (q0==median(x)){p.value=0.5;p.value2=1}
+list(Sign.test1=m1, p.values.of.one.tail.test=p.value,
+p.value.of.two.tail.test=p.value2)}
+
+
+mci=function(x,alpha=0.05){
+n=length(x);b=0;i=0;while(b<=alpha/2&i<=floor(n/2))
+{b=pbinom(i,n,.5);k1=i;k2=n-i+1;a=2*pbinom(k1-1,n,.5);i=i+1}
+z=c(k1,k2,a,1-a);z2="Entire range!"
+if (k1>=1)out=list(Confidence.level=1-a,CI=c(x[k1],x[k2]))
+else out=list(Confidence.level=1-2*pbinom(0,n,.5),CI=z2)
+out}
+
+mci2=function(x=x1,alpha=0){n=length(x);q=.5
+m=floor(n*q);s1=pbinom(0:m,n,q);s2=pbinom(m:(n-1),n,q,low=F);
+ss=c(s1,s2);nn=length(ss);a=NULL;for(i in 0:m)
+{b1=ss[i+1];b2=ss[nn-i];b=b1+b2;d=1-b;if((b)>1)break
+a=rbind(a,c(b,d,x[i+1],x[n-i]))}
+if (a[1,1]>alpha) out="alpha is too small, CI=All range" else
+for (i in 1:nrow(a)) if (a[i,1]>alpha){out=a[i-1,];break}
+out}
+
+qci=function(x,alpha=0.05,q=.25){
+x<-sort(x);n=length(x);a=alpha/2;r=qbinom(a,n,q);
+s=qbinom(1-a,n,q);CL=pbinom(s,n,q)-pbinom(r-1,n,q)
+if (r==0) lo<-NA else lo<-x[r]
+if (s==n) up<-NA else up<-x[s+1]
+list(c("lower limit"=lo,"upper limit"=up,
+        "1-alpha"=1-alpha,"true conf"=CL)) }
+
+walsh=NULL;for(i in 1:10) for(j in i:10)
+walsh=c(walsh,(y[i]+y[j])/2);walsh=sort(walsh)
+
+
+ns=function(x,m0){x1=y-m0;r=rank(abs(x1));
+s=qnorm(.5*(1+r/(n+1)))*sign(x1);tt=sum(s)/sqrt(sum(s^2));
+list(pvalue.2sided=2*min(pnorm(tt),pnorm(tt,low=F)),T=tt,s=s)}
+
+
+
+run.test=function(y,cut=0){ if(cut!=0)x=(y>cut)*1 else x=y
+N=length(x);k=1;for(i in 1:(N-1))if (x[i]!=x[i+1])k=k+1;r=k;
+m=sum(1-x);n=N-m;
+P1=function(m,n,k){
+       2*choose(m-1,k-1)/choose(m+n,n)*choose(n-1,k-1)}
+P2=function(m,n,k){choose(m-1,k-1)*choose(n-1,k)/choose(m+n,n)
+               +choose(m-1,k)*choose(n-1,k-1)/choose(m+n,n)}
+r2=floor(r/2);if(r2==r/2){pv=0;for(i in 1:r2) pv=pv+P1(m,n,i);
+ for(i in 1:(r2-1)) pv=pv+P2(m,n,i)} else {pv=0
+ for(i in 1:r2) pv=pv+P1(m,n,i)
+ for(i in 1:r2) pv=pv+P2(m,n,i)};if(r2==r/2)
+pv1=1-pv+P1(m,n,r2) else pv1=1-pv+P2(m,n,r2);
+z=(r-2*m*n/N-1)/sqrt(2*m*n*(2*m*n-m-n)/(m+n)^2/(m+n-1));
+ap1=pnorm(z);ap2=1-ap1;tpv=min(pv,pv1)*2;
+list(m=m,n=n,N=N,R=r,Exact.pvalue1=pv,
+Exact.pvalue2=pv1,Aprox.pvalue1=ap1, Aprox.pvalue2=ap2,
+Exact.2sided.pvalue=tpv,Approx.2sided.pvalue=min(ap1,ap2)*2)}

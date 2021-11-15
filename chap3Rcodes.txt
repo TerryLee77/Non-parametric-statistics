@@ -1,0 +1,29 @@
+z=read.table("D:/data/salary.txt")
+k=unique(z[,2]);m=median(z[,1]);m1=NULL;m2=NULL
+for(i in k){m1=c(m1,sum(z[z[,2]==i,1]>m));
+m2=c(m2,sum(z[z[,2]==i,1]<=m))}
+C=rbind(m1,m2)
+
+w=cbind(c(x,y),c(rep(1,17),rep(2,15));w=w[order(w[,1]),]
+w=cbind(w,1:32,qnorm((1:32)/(17+15+1)))
+
+
+
+x=read.table("d:/data/athletefootp.txt");
+x=x[,-1];n12=sum(x[((x[,1]==0)&(x[,2]==1)),])
+n21=sum(x[((x[,1]==1)&(x[,2]==0)),])
+McNemar=(n12-n21)^2/(n12+n21);pvalue=1-pchisq(McNemar,df=1)
+list(McNemar=McNemar,pvaluetwosided=pvalue)
+
+
+
+x=read.table("d:/data/music.txt");
+w=matrix(x[,3],byrow=T,ncol=2);I=nrow(w);n=sum(w);w=w/n;
+pa=sum(diag(w));pe=sum(apply(w,1,sum)*apply(w,2,sum))
+kap=(pa-pe)/(1-pe)
+A=sum(diag(w)*(1-(apply(w,1,sum)+apply(w,2,sum))*(1-kap))^2)
+tempB=matrix(rep(apply(w,1,sum),I)+
+   rep(apply(w,2,sum),each=I),byrow=T,ncol=I)
+diag(tempB)=0;B=(1-kap)^2*sum(w*tempB^2)
+CC=(kap-pe*(1-kap))^2;ASE=sqrt((A+B-CC)/(1-pe)^2/n)
+list(kappa=kap,ASE=ASE,CI=c(kap-1.96*ASE,kap+1.96*ASE))
