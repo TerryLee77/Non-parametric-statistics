@@ -1,0 +1,603 @@
+---
+title: "HW2"
+author:
+  - TerryLee77
+documentclass: ctexart
+keywords:
+  - 非参数统计
+  - R Markdown
+output:
+  rticles::ctex:
+    fig_caption: yes
+    number_sections: yes
+    toc: yes
+    toc_depth: 3
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+# Readme {-}
+
+由于采用`Linux`环境编译`pdf`,在某些中文上可能会出现乱码重叠现象，如分布
+
+而且`rmarkdown`的计算精度会比正常`r`低仅为`10e-6`，可能会存在误差
+
+```{r tidy=TRUE}
+setwd('/mnt/nasData/SYSU/Non-parametric statistics')
+getwd()
+```
+
+# Chapter4 {-}
+
+## 4.3 {-}
+
+导入数据
+
+```{r tidy=TRUE}
+rm(list = ls())
+data <- read.table('../../data/4.10.3.txt')
+R <- rank(data$V1)
+```
+
+### `Kruskal-Wallis`精确检验 {-}
+
+不妨假设$H_0:\theta_1 = \theta_2 = \theta_3$;$H_1:$至少有一个等号不成立，计算`Kruskal-Wallis`统计量
+$$H=\frac{12}{N(N+1)} \sum_{i=1}^{k} n_{i}\left(\bar{R}_{i}-\bar{R}\right)^{2}=\frac{12}{N(N+1)} \sum_{i=1}^{k} \frac{R_{i}^{2}}{n_{i}}-3(N+1)$$
+
+```{r tidy=TRUE}
+r <- rep(0,length(unique(data$V2)))
+temp <- 0
+N <- length(data$V1)
+for (i in 1:length(unique(data$V2))){
+  r[i] <- sum(R[which(data$V2==i)])
+  temp <- r[i]^2/length(which(data$V2==i)) +temp
+}
+(H <- 12/(N*(N+1))*temp-3*(N+1))
+```
+
+可知$H = `r H`$,因为存在打结情况,进行修正有
+$$H_{C}=\frac{H}{1-\sum_{i=1}^{g}\left(\tau_{i}^{3}-\tau_{i}\right) /\left(N^{3}-N\right)}$$
+
+计算有
+
+```{r tidy=TRUE}
+temp <- sum(as.data.frame(table(R))$Freq[which(as.data.frame(table(R))$Freq>1)]^3-as.data.frame(table(R))$Freq[which(as.data.frame(table(R))$Freq>1)])/(N^3-N)
+(H <- H/(1-temp))
+```
+
+查表有$P_0(H\geq11.625)=0.0010$可知，拒绝零假设
+
+可以使用以下代码求解,由于复杂度过高，`rmarkdown`导出需要运算结果，故未在此次导出中跑该代码，在先前测试中，跑得`sum(y>=Hvalue)`=153,有`p-value` = `153/(gamma(25)/(gamma(9))^3)` = `r 153/(gamma(25)/(gamma(9))^3)``(r精度问题)
+```{r echo=FALSE, out.width = '100%'}
+knitr::include_graphics("./1.png")
+```
+
+```{r echo = T, results = 'hide' ,tidy=TRUE,eval=F}
+KW.test=function(m1=8,m2=8,m3=8,Hvalue=17.00218){
+  # this program is for m1=8, m2=8, and m3 can be any integer
+  m<-m1+m2+m3;
+  Jh8 = function(m){
+  library(doParallel)
+  cl <- makeCluster(12)
+  registerDoParallel(cl)
+  Jh8_1=function(x,m){
+    a<-rep(0,8)
+      for (j in (x+1):(m-6)){
+        for (k in (j+1):(m-5)){
+          for (l in (k+1):(m-4)){
+            for (f in (l+1):(m-3)){
+              for(q in (f+1):(m-2)){
+                for(w in (q+1):(m-1)){
+                  for(r in(w+1):m){
+                    a<-rbind(a,c(x,j,k,l,f,q,w,r))
+                  }}}}}}}
+    return(a[2:nrow(a)])}
+  a <- foreach(x=1:(m-7),.combine='rbind') %dopar% Jh8_1(x,m)
+  stopCluster(cl)
+  return(a)
+  }
+  JTid1<-Jh8(m1+m2+m3);n1<-nrow(JTid1);JTid2<-Jh8(m2+m3);
+  n2<-nrow(JTid2);nn<-n1*n2;const<-1:m;y<-rep(0,nn)
+  count<-1
+  for (i in 1:n1){for (j in 1:n2){temp1<-c(JTid1[i,]);
+  temp2<-(const[-temp1])[c(JTid2[j,])];
+  temp3<-const[-c(temp1,temp2)];
+  y[count]<-12/(m*(m+1))*((sum(temp1))^2/m1+(sum(temp2))^2/m2+
+                            (sum(temp3))^2/m3)-3*(m+1)
+  count <- count +1}}
+  pvalue<-(sum(y>=Hvalue))/nn;
+  y<-sort(y);aaa<-aa<-y[1];tempc<-1
+  for (i in 1:nn){if ((y[i]-aa)>10^{-12})
+  {aaa<-c(aaa,y[i]);aa<-y[i];tempc<-c(tempc,1-(i-1)/nn)}}
+  out<-cbind(aaa,tempc);z=seq(0,12,0.1);par(mfrow=c(1,2));
+  hist(y,main="(1) Kruskal-Wallis检验精确分布直方图");
+  plot(z,dchisq(z,df=2),type="l",main="(2) 自由度为2的chisq分布密度函数");
+  list(c("(m1,m2,m3)"=c(m1,m2,m3),"H"=Hvalue,"pval"=pvalue),out)
+}
+KW.test()
+```
+
+### `Monte Carlo` {-}
+
+```{r tidy=TRUE}
+x<- data$V1
+nsim<-10000000
+H1<-rep(0,nsim)
+## 开多线程
+library(parallel)
+cl<-makeCluster(16)
+func<- function(n){
+  A<-sample(x,N,replace = T)##有放回
+	rr <- rank(A)
+	temp <- rbind(A[1:8],A[9:16],A[17:24])
+  temp_H <- 0
+  temp_H <- (sum(rr[1:8])^2+sum(rr[9:16])^2+sum(rr[17:24])^2)/8
+  H <-12/(N*(N+1))*temp_H-3*(N+1)
+  R <- rank(A)
+  x <- as.data.frame(table(R))
+  index <- which((x)$Freq>1)
+  temp <- sum(x$Freq[index]^3-x$Freq[index])/(N^3-N)
+  return(H)
+}
+clusterExport(cl, "x")
+clusterExport(cl, "N")
+H1<-do.call(c,parLapply(cl, 1:nsim, func))
+stopCluster(cl)
+(Pvalue<-sum(H1>=H)/nsim)##精确p值逼近
+```
+
+有`p-value`=`r Pvalue`，拒绝零假设
+
+### 大样本近似 {-}
+
+由已知有： 当N比较大的时候，$H$在零假设下近似服从$\chi^2_{k-1}$ 则有
+
+```{r tidy=TRUE}
+1-pchisq(H,2)
+```
+
+即`p-value` = `r 1-pchisq(H,2)`拒绝零假设，若考虑统计量
+$$F^{*}=\frac{\sum_{i=1}^{k} n_{i}\left(\bar{R}_{i}-\frac{N+1}{2}\right)^{2} /(k-1)}{\sum_{i=1}^{k} \sum_{j=1}^{n_{1}}\left(R_{i j}-\bar{R}_{i}\right)^{2} /(N-k)} = \frac{(N-k)H}{(k-1)(N-1-H)}\sim F(k-1,N-k)$$
+
+```{r tidy=TRUE}
+(f<-(N-3)*H/(2*(N-1-H)))
+1-pf(f,2,N-1)
+```
+
+`p-value` = `r 1-pf(f,2,N-1)`也拒绝零假设
+
+## 4.9 {-}
+
+导入数据
+
+```{r tidy=TRUE}
+rm(list = ls())
+data <- read.table('../../data/4.10.9.txt')
+x <- data$V1
+summary(x)
+```
+
+显然此处为双因素不完全设计，采用`Durbin检验`有:
+考虑检验$H_0:\theta_1 = \theta_2 = \theta_3$,$H_1$:至少有一个等号不成立，构建统计量
+
+$$
+D=\frac{12(k-1)}{r k\left(t^{2}-1\right)} \sum_{i=1}^{k}\left\{R_{i}-\frac{r(t+1)}{2}\right\}^{2}=\frac{12(k-1)}{r k\left(t^{2}-1\right)} \sum_{i=1}^{k} R_{i}^{2}-\frac{3 r(k-1)(t+1)}{t-1}
+$$
+
+因为出现了打结的情况，对上述公式进行修正
+
+$$
+D=\frac{(k-1) \sum_{i=1}^{k}\left\{R_{i}-\frac{r(t+1)}{2}\right\}^{2}}{A-C}
+$$
+
+这里
+$A=\sum_{i=1}^{k} \sum_{j=1}^{b} R_{i j}^{2} ; \quad C=\frac{b t(t+1)^{2}}{4}$
+
+### 4.9.1{-}
+
+若我们探究汽车种类对油耗有没有影响，此时路况作为区组有$k=5,t=4,b=5,r=4$
+先计算出$R_i =\sum_j R_{ij}$有
+```{r tidy=TRUE}
+k=5;t=4;b=5;r=4
+x1 <- cbind(data,rep(0,20))
+## 第一问
+names(x1)[ncol(x1)] <- paste("rank1")
+for (i in unique(data$V2)){
+  x1$rank1[which(data$V2==i)]=rank(x[which(data$V2 ==i)])
+}
+## 第二问
+x1 <- cbind(x1,rep(0,20))
+names(x1)[ncol(x1)] <- paste("rank2")
+for (i in unique(data$V3)){
+  x1$rank2[which(data$V3==i)]=rank(x[which(data$V3 ==i)])
+}
+head(x1)
+```
+
+计算`Durbin`检验统计量
+```{r tidy=TRUE}
+D1 <- 0
+for (i in 1:k){
+  temp <- sum(x1$rank2[which(x1$V2==i)])
+  D1 <- 12*(k-1)/(r*k*(t^2-1))*temp^2 +D1
+}
+(D1 <- D1 - 3*r*(k-1)*(t+1)/(t-1))
+```
+算得`Durbin`统计量为$`r D1`$
+
+#### 精确分布{-}
+
+感觉rmarkdown会有问题，算出来结果与正常`r`代码跑出来的结果略有差异，不过在可接受范围内，可能是计算精度的问题
+```{r tidy=TRUE}
+## 感觉rmarkdown会有问题，算出来结果不太对
+Durbin = function(k=5,t=4,b=5,r=4,D0 = 14.4){
+pb<-txtProgressBar(style = 3)
+start_time=Sys.time()
+B=cbind(c(1,2,3,4),c(1,2,4,3),c(1,3,2,4),c(1,3,4,2),c(1,4,2,3),c(1,4,3,2),
+        c(2,1,3,4),c(2,1,4,3),c(2,3,1,4),c(2,3,4,1),c(2,4,1,3),c(2,4,3,1),
+        c(3,1,2,4),c(3,1,4,2),c(3,2,1,4),c(3,2,4,1),c(3,4,1,2),c(3,4,2,1),
+        c(4,1,2,3),c(4,1,3,2),c(4,2,1,3),c(4,2,3,1),c(4,3,1,2),c(4,3,2,1))
+nn=24^b;Numfunc=function(r,b,nnum){ind=rep(0,b);temp=nnum;
+for(i in 1:b){ind[i]=floor(temp/(24^(b-i)))
+temp=temp-ind[i]*24^(b-i)};ind};
+y=rep(0,nn);
+for(i in 0:(nn-1)){A=B[,Numfunc(r,b,i)+1]
+R=c(sum(A[1,1:4]),sum(A[2,1:3])+A[1,5],sum(A[2,4:5])+sum(A[3,1:2]),
+    sum(A[3,3:5])+A[4,1],sum(A[4,2:5]))
+y[i+1]=12*(k-1)/(r*k*(t^2-1))*sum((R-r*(t+1)/2)^2)
+setTxtProgressBar(pb,(i+1)/(nn-1))
+};
+##y=y[2:length(y)];
+temp<-sum(y>=D0)
+pvalue=temp/nn;y0=sort(unique(y));ycnt=NULL;
+for(i in 1:length(y0))ycnt=c(ycnt,length(y[y==y0[i]]));
+plot(y0,ycnt/nn,cex=0.5,ylab="density function",xlab="Durbin");
+for(i in 1:length(y0))
+  points(c(y0[i],y0[i]),c(ycnt[i]/nn,0),type="l",lwd=2)
+close(pb)
+list(cbind("k"=k,"b"=b,"r"=r,"t"=t,"sum(y>=D0)"=temp,'pvalue'=pvalue))
+}
+Durbin()
+```
+算得`p-value` = $1.507041e-05$,在$\alpha\geq1.507041e-05$下拒绝零假设
+
+#### 大样本近似
+
+在零假设情况下，对于固定的r,t，有$D\rightarrow \chi^2_{k-1}$
+```{r tidy=TRUE}
+1-pchisq(D1,df = k-1)
+```
+有$pvalue = `r 1-pchisq(D1,df = k-1)`$，在$\alpha \geq`r 1-pchisq(D1,df = k-1)`$拒绝零假设，即汽车种类对油耗有影响
+
+### 4.10.2{-}
+
+同理，我们计算出`Durbin`统计量有
+```{r tidy=TRUE}
+D2 <- 0
+for (i in 1:k){
+  temp <- sum(x1$rank1[which(x1$V3==i)])
+  D2 <- 12*(k-1)/(r*k*(t^2-1))*temp^2 +D2
+}
+(D2 <- D2 - 3*r*(k-1)*(t+1)/(t-1))
+```
+#### 精确分布{-}
+
+```{r tidy=TRUE}
+Durbin(D0 = D2)
+```
+有`p-value` = $1.507041e-05$，在$\alpha\geq 1.507041e-05$拒绝零假设
+
+#### 大样本近似{-}
+
+```{r tidy=TRUE}
+1-pchisq(D2,df = k-1)
+```
+算的$pvalue = `r 1-pchisq(D2,df = k-1)`$,拒绝零假设
+
+## 4.11 {-}
+
+导入数据
+```{r tidy=TRUE}
+rm(list = ls())
+data <- read.table('../../data/3.7.16.txt')
+```
+假设$H_0:\theta_1=\theta_2$，备择假设$H_1:\theta_1\neq\theta_2$
+
+### McNemar{-}
+
+```{r}
+mcnemar = function(x){
+  n21=sum(x[((x[,1]==0)&(x[,2]==1)),])
+  n12=sum(x[((x[,1]==1)&(x[,2]==0)),])
+  McNemar=(n12-n21)^2/(n12+n21);
+  pvalue=1-pchisq(McNemar,df=1)
+  return(pvalue)
+}
+
+mcnemar(data)
+```
+可知$pvalue = `r mcnemar(data)`$
+
+### Cochran{-}
+
+不妨构建统计量
+$$Q=\frac{k(k-1) \sum_{i=1}^{k}\left(N_{i}-\bar{N}\right)^{2}}{k N-\sum_{j=1}^{b} L_{j}^{2}}=\frac{k(k-1) \sum_{i=1}^{k} N_{i}^{2}-(k-1) N^{2}}{k N-\sum_{j=1}^{b} L_{j}^{2}}$$
+其中$\bar{N} = \frac{1}{k}\sum^k_{i=1}N_i$
+
+在大样本情况下有
+$$Q\rightarrow \chi^2_{k-1}$$
+
+在此题有
+```{r tidy=TRUE}
+Cochran=function(){Xpchs=function(n=7,k=5){
+  #output(n_1,..,n_k)-all possible combination with n_1+...+n_k=n
+  temp=cbind(n:0,0:n);if (k>=3){
+    for (j in 3:k){a1=temp[,1:(j-2)];a2=temp[,j-1];temp0=NULL;
+    for (i in 1:length(a2)){
+      if (j==3) temp0=rbind(temp0,cbind(rep(a1[i],a2[i]+1),a2[i]:0,
+                                        0:a2[i]))
+      if (j>3)  temp0=rbind(temp0,cbind(matrix(rep(a1[i,],a2[i]+1),
+                                               ncol=j-2,byrow=T),a2[i]:0,0:a2[i]))};temp=temp0}};temp}
+Xpchs2=function(n=4,k=2){
+  #output: all 0 and 1 columns, with n-k 0s and k- 1s columns
+  Xchoose=function(n=4,k=2){if (k==0) aa=NULL
+  if (k>=1){aa=matrix(1:n,ncol=1);m=0;
+  if(k>1){for(i in 2:k){m=m+1;m1=nrow(aa);
+  aa=cbind(matrix(rep(aa,each=n),ncol=m),rep(1:n,m1))
+  aa=aa[(aa[,m+1]>aa[,m]),]}}};aa};e01=Xchoose(n,k)
+  temp=matrix(0,nrow=nrow(e01),ncol=n);
+  for (j in 1:nrow(temp)){if (k==1) temp[j,e01[j]]=1
+  if (k>1) temp[j,e01[j,]]=1};temp}
+x=read.table('../../data/3.7.16.txt');
+L=apply(x,1,sum);n=nrow(x);k=ncol(x);L=apply(x,1,sum);
+R=apply(x,2,sum);N=sum(R);
+Q0=(k*(k-1)*sum((R-mean(R))^2))/(k*N-sum(L^2));
+Ni=NULL;for (i in 1:k-1) Ni=c(Ni,sum(L==i));Ni=Ni[-1];
+eye0=Xpchs2(k,1);temp0=Xpchs(Ni[1],nrow(eye0));Ri0=temp0%*%eye0;
+prob0=factorial(Ni[1])/apply(factorial(temp0),1,prod)*
+  (1/nrow(eye0))^(Ni[1]);
+if (length(Ni)>1){for (i in 2:length(Ni)){
+  eye1=Xpchs2(k,i);temp1=Xpchs(Ni[i],nrow(eye1));Ri1=temp1%*%eye1;
+  prob1=factorial(Ni[i])/apply(factorial(temp1),1,prod)*
+    (1/nrow(eye1))^(Ni[i])
+  Ri0=matrix(rep(t(Ri0),nrow(Ri1)),byrow=T,ncol=k)+
+    matrix(rep(Ri1,each=nrow(Ri0)),ncol=k)
+  prob0=rep(prob0,length(prob1))*rep(prob1,each=length(prob0))}}
+xa=k*(k-1)*apply((Ri0-apply(Ri0,1,mean))^2,1,sum)/(k*N-sum(L^2))
+nn=length(xa);xa0=sort(unique(xa));xacnt=NULL;
+for (i in 1:length(xa0)) xacnt=c(xacnt,length(xa[xa==xa0[i]]));
+plot(xa0,xacnt/nn,cex=0.5,ylab="density function",
+     xlab="value of Cochran statistics");
+for (i in 1:length(xa0))
+  points(c(xa0[i],xa0[i]),c(xacnt[i]/nn,0),type="l",lwd=2)
+list(unique(xa),cbind(rbind(t(x),L),c(R,N)),Q=Q0,
+     Exactp=sum(prob0[(xa>=Q0)]),pvalue=pchisq(Q0,k-1,low=F))}
+Cochran()
+```
+有精确分布为$pvalue = 0.01272583$，大样本近似$pvalue = 0.007632882$
+
+可以知道，`McNemar`实际上就是当$k=2$的时候的`Cochran`检验   
+
+# Chapter5 {-}
+
+## 5.4 {-}
+
+导入数据
+```{r tidy=TRUE}
+rm(list = ls())
+data<-read.table('../../data/5.7.4.txt')
+```
+
+因为考虑检验天平的稳定性，不妨假设$H_0:\sigma_1^2 = \sigma_2^2$
+则有备择假设$H_1:\sigma_1^2\neq\sigma_2^2$
+
+不妨采用`平方秩检验`
+在两样本情况下构建统计量
+$$
+\begin{array}{l}
+Z_{X}=\frac{\left(T_{X}-m \bar{R}\right)}{S} \rightarrow N(0,1) \\
+Z_{Y}=\frac{\left(T_{Y}-n \bar{R}\right)}{S} \rightarrow N(0,1)
+\end{array}
+$$
+其中
+$$
+\bar{R}=\frac{1}{m+n} \sum_{i=1}^{m+n} R_{i}, \quad S^{2}=\frac{m n\left\{\sum_{i} R_{i}^{2}-(m+n) \bar{R}^{2}\right\}}{(m+n)(m+n-1)}
+$$
+代入数据有:
+```{r}
+x <- data
+y=x[x[,2]==2,1];x=x[x[,2]==1,1];m=length(x);n=length(y)
+x1=abs(x-mean(x));y1=abs(y-mean(y));xy1=c(x1,y1);xy0=c(x,y)
+xyi=c(rep(1,m),rep(2,n));xy=cbind(xy1,xy0,xyi)
+xy2=cbind(xy[order(xy[,1]),],1:(m+n),(1:(m+n))^2)
+T1=sum(xy2[xy2[,3]==1,5]);T2=sum(xy2[xy2[,3]==2,5])
+R=xy2[,5];meanR=mean(R);
+S=sqrt(m*n*(sum(R^2)-(m+n)*meanR^2)/(m+n)/(m+n-1))
+Zx=(T1-m*meanR)/S;Zy=(T2-n*meanR)/S;
+(pvalue=min(pnorm(Zx),pnorm(Zy)))
+```
+算得`pvalue` = $`r pvalue`$可知不能在小于$`r pvalue`$的水平拒绝零假设
+
+## 5.6 {-}
+
+导入数据
+```{r tidy=TRUE}
+rm(list = ls())
+data<-read.table('../../data/5.7.6.txt')
+```
+
+假设$H_0:\sigma^2_1 = \sigma^2_2 = \sigma^2_3$,$H_1 :$不是所有的$\sigma_i^2$都相等
+构建统计量:
+$$K=\frac{12}{N(N+1)} \sum_{i=1}^{k} n_{i}\left\{\overline{R^{\prime}}_{i}-\frac{N+1}{2}\right\}^{2}$$
+其中$\overline{R^{\prime}}{ }_{i}=\frac{1}{n_{i}} \sum_{j=1}^{n_{i}} R_{i j}^{\prime}$
+
+```{r tidy=TRUE}
+m <- median(data$V1)
+data <-  cbind(data,abs(data$V1-m))
+names(data)[ncol(data)] = 'V'
+data <-  cbind(data,rank(data$V))
+names(data)[ncol(data)] = 'R'
+head(data)
+```
+```{r tidy=TRUE}
+N <- nrow(data)
+k <- 0
+for (i in unique(data$V2)){
+  tempn <- length(which(data$V2==i))
+  tempr <- sum(data$R[which(data$V2==i)])/tempn
+  k <- tempn*(tempr-(N+1)/2)^2 +k
+}
+(k <- 12/(N*(N+1))*k)
+```
+由于精确分布无法计算和查表，采用大样本近似则有
+```{r}
+1- pchisq(k,df = 2)
+```
+可知`pvalue` = $`r 1- pchisq(k,df = 2)`$，接受零假设
+
+若使用`r`中自带函数`fligener.test`
+```{r tidy=TRUE}
+fligner.test(data$V1,data$V2)
+```
+
+# 附加题 {-}
+
+```{r tidy=TRUE}
+rm(list = ls())
+data <- read.csv('../../data/University.csv')
+head(data)
+```
+
+
+不妨记各高校对于榜单的排名位置参数为$\theta_i$假设$H_0:\theta_1 = \theta_2 = \theta_3 = \theta_{4}$,$H_1:$不是所有位置参数都相等
+构建统计量
+$$Q=\frac{12}{b k(k+1)} \sum_{i=1}^{k}\left(R_{i}-\frac{b(k+1)}{2}\right)^{2}=\frac{12}{b k(k+1)} \sum_{i=1}^{k} R_{i}^{2}-3 b(k+1)$$
+其中$R_i = \sum^b_{i=1}R_{ij}\ \ ,i = 1 ,\cdots,k$
+
+计算$Q$统计量
+
+由已知有此时
+```{r}
+x <- as.matrix(cbind(data$X2020ARWU, data$X2021QS, data$X2021THE, data$X2021USNEWS))
+x <- t(x)
+b <- 4
+k <- nrow(data)
+```
+
+则有
+```{r}
+rr <- rep(0,k)
+
+for (i in 1:b){
+  tempr <- rank(x[i,])
+  rr <- cbind(rr,tempr)
+}
+rr <- rr[,2:ncol(rr)]
+Q1<-0
+```
+有
+```{r}
+for(i in 1:k){
+  tempr <- sum(rr[i,])
+  Q1 <- (tempr-(b*(k+2))/2)^2+Q1
+}
+(Q <-12*(Q1)/(b*(k^2+k)))
+```
+因为存在打结的情况，需要作修正
+$Q_{C}=\frac{Q}{1-C}$,这里 $C=\frac{\sum_{i, j}\left(\tau_{i j}^{3}-\tau_{i j}\right)}{b k\left(k^{2}-1\right)}$
+
+```{r tidy=TRUE}
+temp <- 0
+for(i in 1:b){
+  R <- rr[i,]
+  temp <- sum(as.data.frame(table(R))$Freq[which(as.data.frame(table(R))$Freq>1)]^3-as.data.frame(table(R))$Freq[which(as.data.frame(table(R))$Freq>1)]) +temp
+}
+c <- temp/(b*k*(k^2-1))
+(QC <- Q/(1-c)) 
+```
+
+
+
+### Friedman rank sum test{-}
+
+#### 大样本近似{-}
+
+若采用大样本近似有$Q \rightarrow \chi^2(k-1)$
+```{r tidy=TRUE}
+1- pchisq(QC,df = k-1)
+```
+则可以在$\alpha \geq `r 1- pchisq(QC,df = k-1)`$情况下拒接零假设
+
+若采用`friedman.test`
+```{r}
+friedman.test(x)
+```
+
+
+#### 精确分布{-}
+
+若采用精确分布有，因为内存不够大(48G都不够我也没办法)
+```{r tidy=TRUE}
+(W <- QC/(b*(k-1)))
+Friedman=function(k=3,b=4,W0=0.8125){
+perm=function(n=4){A=rbind(c(1,2),c(2,1));
+if (n>=3){for (i in 3:n){temp=cbind(rep(i,nrow(A)),A);
+for (j in (1:(i-2))){
+temp=rbind(temp,cbind(A[,1:j],rep(i,nrow(A)),A[,(j+1):(i-1)]))};
+temp=rbind(temp,cbind(A,rep(i,nrow(A))));A=temp};};A}
+B=perm(k) # all possible permutations
+print(nrow((B)))
+nn=nrow(B);ind=rep(1:nn,each=nn^(b-1));for (i in 1:(b-1)){
+ind=cbind(ind,rep(rep(1:nn,each=nn^(b-1-i)),nn^(i)))};
+nn=nrow(ind);y=rep(0,nn);
+for (i in 1:nn){R=apply(B[ind[i,],],2,sum);
+y[i]=12/(b*k*(k+1))*sum(R^2)-3*b*(k+1)};
+y0=sort(unique(y));ycnt=ydnt=NULL;
+for (i in 1:length(y0)){ydnt=c(ydnt,length(y[y==y0[i]]));
+ycnt=c(ycnt,length(y[y>=y0[i]]))};
+plot(y0,ydnt/nn,cex=0.5,ylab="density function",
+xlab="values of the Friedman statistics");
+for (i in 1:length(y0))
+points(c(y0[i],y0[i]),c(ydnt[i]/nn,0),type="l",lwd=2);
+list(t(cbind(W=y0/b/(k-1),Q=y0,density=ydnt/nn,pvalue=ycnt/nn)),
+Pvalue=length(y[y>=(b*(k-1)*W0)])/nn)}
+```
+
+### Kendall{-}
+
+由已知有此时
+```{r}
+b <- 4
+k <- nrow(data)
+```
+
+则有
+```{r}
+rr <- rep(0,k)
+
+for (i in 1:b){
+  tempr <- rank(x[i,])
+  rr <- cbind(rr,tempr)
+}
+rr <- rr[,2:ncol(rr)]
+Q1<-0
+for(i in 1:k){
+  tempr <- sum(rr[i,])
+  Q1 <- (tempr-(b*(k+2))/2)^2+Q1
+}
+(W1 <-12*(Q1)/(b^2*(k^3-k)))
+```
+又因为在零假设情况下有
+$$b(k-1)W\rightarrow\chi^2_{k-1}$$
+```{r}
+pchisq(b*(k-1)*W1,df = k-1,low = F)
+```
+拒绝零假设
+
+## 更正{-}
+
+周五严老师说此处`Kendall`和`Friedman`检验的$b,k$应该是一样的，因为都是针对机构作为处理，学校作为区组来处理，所以对上面答案进行更正
+```{r}
+friedman.test(x)
+```

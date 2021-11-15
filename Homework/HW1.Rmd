@@ -1,0 +1,502 @@
+---
+title: "HW1"
+author:
+  - TerryLee77
+documentclass: ctexart
+keywords:
+  - 中文
+  - R Markdown
+output:
+  rticles::ctex:
+    fig_caption: yes
+    number_sections: yes
+    toc: yes
+    toc_depth: 4
+---
+
+# Readme
+
+由于采用`rmd`格式，在中文状态下运行可能会出现乱码情况
+
+#  2.3
+读取数据
+```{r}
+data1 <- read.table('U:/SYSU/Non-parametric statistics/data/2.6.3.TXT')
+y <- unlist(data1)
+summary(y)
+```
+记今年索赔数额的中位数为$M$
+
+```{r}
+m <- median(unlist(y))
+```
+
+则计算有$M = `r m`$
+
+## 1
+
+考虑到1997年该险种的索赔数额的中位数为5064元，有$M = `r m` > 5064$,有变化。
+因为问题只考虑为是否变化，不能采用单边检验回答该问题
+
+## 2
+
+考虑到1997年该险种的索赔数额的中位数为5064元，即有零假设为$H_0:M = 5064$,备择假设为$H_1:M \neq 5064$
+
+### 精确估计
+```{r}
+##定义函数
+sign.test=function(x,p,q0)
+{s1=sum(x<q0);
+s2=sum(x>q0);
+n=s1+s2
+p1=pbinom(s1,n,p);
+p2=1-pbinom(s1-1,n,p)
+if (p1>p2)m1="One tail test: H1: Q>q0"
+    else m1="One tail test: H1: Q<q0"
+p.value=min(p1,p2);
+m2="Two tails test";
+p.value2=2*p.value
+if (q0==median(x))
+  {p.value=0.5;p.value2=1}
+list(Sign.test1=m1, p.values.of.one.tail.test=p.value,
+p.value.of.two.tail.test=p.value2)}
+
+test<-sign.test(y,0.5,5064)
+(p0 <- test$p.value.of.two.tail.test)
+```
+显然$p-value = `r p0`$,则在显著性水平$\alpha = 0.05$的情况下接受零假设
+
+### 正态近似
+
+同理，考虑正态分布
+如果在零假设  $H_{0}: Q_{\pi}=q_{0}$ 下, K服从二项分布  $Bin(n, \pi)$ , 那么当n较大时,则可认为  $$Z=(K-n \pi) / \sqrt{n \pi(1-\pi)} \sim N(0,1)$$则有
+```{r}
+##定义函数
+sign.norm.test=function(x,p,q0)
+{s1=sum(x<q0);
+s2=sum(x>q0);
+n=s1+s2
+k = min(s1,s2)
+z = (k-n*p)/sqrt(n*p*(1-p))
+return (2*pnorm(z))
+}
+(p2 = sign.norm.test(y,.5,5064))
+
+```
+则可知算的$p-value = `r p2` < 0.05$拒绝零假设
+
+## 3
+
+求置信区间有
+```{r}
+mci=function(x,alpha=0.05){
+n=length(x);
+b=0;
+i=0;
+while(b<=alpha/2&i<=floor(n/2))
+{b=pbinom(i,n,.5);
+k1=i;
+k2=n-i+1;
+a=2*pbinom(k1-1,n,.5);
+i=i+1}
+z=c(k1,k2,a,1-a);
+z2="Entire range!"
+if (k1>=1)
+  out=list(Confidence.level=1-a,CI=c(x[k1],x[k2]))
+else 
+  out=list(Confidence.level=1-2*pbinom(0,n,.5),CI=z2)
+out}
+x = mci(y)$CI
+```
+即所得置信区间为$\left[`r x[1]`,`r x[2]`\right)$
+ 
+# 2.4
+
+## 2
+
+考虑到1997年该险种的索赔数额的中位数为5064元，即有零假设为$H_0:M = 5064$,备择假设为$H_1:M \neq 5064$
+
+### 精确估计
+
+采用Wilcoxon符号秩检验，则有
+```{r warning=FALSE}
+test1<-wilcox.test(y,mu = 5064)
+(p <- test1$p.value)
+```
+显然$p-value = `r p`$,则在显著性水平$\alpha = 0.05$的情况下拒绝零假设，接受备择假设
+
+### 正态近似
+
+```{r}
+## 定义函数计算秩(双边)
+count_w <- function(y,mu){
+temp <- rank(abs(y - mu))
+w1 = 0
+w2 = 0
+for( i in y){
+  if(i < mu){
+    w1 =  temp[which(y==i)] + w1
+  }
+  else{
+    w2  = temp[which(y==i)] + w2
+  }
+}
+w = min(w1,w2)
+return(w)
+}
+##计算秩
+(w <- count_w(y,5064))
+```
+
+则可以构建大样本渐进正态统计量$Z$
+$$Z=\frac{W-n(n+1) / 4}{\sqrt{n(n+1)(2 n+1) / 24}} \sim N(0,1)$$
+
+则计算有
+```{r}
+n<-length(y)
+(z <- (w-n*(n+1)/4)/sqrt(n*(n+1)*(2*n+1)/24))
+(p1 <- 2*pnorm(z))
+
+```
+则可知道对于置信水平$\alpha = 0.05$,有$p-value = `r p1`<0.05$,拒绝$H_0$,接受备择假设
+
+## 3
+
+利用Walsh平均可以得到  $\theta$  的置信区间. 这里先按升幂排列Walsh平均, 记为$W_{(1)}, \ldots, W_{(N)},(N=n(n+1) / 2)$ . 则  $\theta$  的  $(1-\alpha)$  置信区间为
+
+$$\left[W_{(k+1)}, W_{(N-k)}\right)$$
+则对于给定的$\alpha = 0/05$有
+```{r}
+walsh = NULL
+N=n*(n+1) / 2
+for(i in 1:n){
+  for (j in 1:n){
+    walsh = c(walsh,(y[i]+y[j])/2)
+  }
+}
+walsh <- sort(walsh)
+(k <- qsignrank(0.025,n))
+(x1 <- walsh[k+1])
+(x2 <- walsh[N-k])
+```
+则可知道95%置信区间为$$\left[W_{(k+1)}, W_{(N-k)}\right) = \left[`r x1`, `r x2`\right)$$
+
+
+# 2.11
+
+导入数据
+```{r}
+rm(list = ls())
+data <- read.table('U:/SYSU/Non-parametric statistics/data/2.6.11.TXT')
+x <- unlist(data)
+summary(x)
+```
+
+## 1
+由已知有零假设$H_0$:有随机性,备择假设$H_1:$无随机性,先计算出中位数$X_{med}$
+```{r warning=FALSE}
+##定义函数
+run.test=function(y,cut=0){ if(cut!=0)x=(y>cut)*1 else x=y
+N=length(x);k=1;for(i in 1:(N-1))if (x[i]!=x[i+1])k=k+1;r=k;
+m=sum(1-x);n=N-m;
+P1=function(m,n,k){
+       2*choose(m-1,k-1)/choose(m+n,n)*choose(n-1,k-1)}
+P2=function(m,n,k){choose(m-1,k-1)*choose(n-1,k)/choose(m+n,n)
+               +choose(m-1,k)*choose(n-1,k-1)/choose(m+n,n)}
+r2=floor(r/2);if(r2==r/2){pv=0;for(i in 1:r2) pv=pv+P1(m,n,i);
+ for(i in 1:(r2-1)) pv=pv+P2(m,n,i)} else {pv=0
+ for(i in 1:r2) pv=pv+P1(m,n,i)
+ for(i in 1:r2) pv=pv+P2(m,n,i)};if(r2==r/2)
+pv1=1-pv+P1(m,n,r2) else pv1=1-pv+P2(m,n,r2);
+z=(r-2*m*n/N-1)/sqrt(2*m*n*(2*m*n-m-n)/(m+n)^2/(m+n-1));
+ap1=pnorm(z);ap2=1-ap1;tpv=min(pv,pv1)*2;
+list(m=m,n=n,N=N,R=r,Exact.pvalue1=pv,
+Exact.pvalue2=pv1,Aprox.pvalue1=ap1, Aprox.pvalue2=ap2,
+Exact.2sided.pvalue=tpv,Approx.2sided.pvalue=min(ap1,ap2)*2)}
+
+(test<-run.test(x))
+p <- test$Aprox.pvalue2
+```
+则有$p-value = `r p`<0.0001$则$\alpha > 0.00001$时候拒绝零假设，接受备择假设
+
+## 2
+
+定义函数
+```{r}
+#增加
+cox_stuart = function(x,p0=0.5){
+  n <- length(x)
+  c = 0
+  d  = NULL
+  if(n%%2==0){
+    c = n/2
+    d<-x[1:c]-x[c+1:n]
+  }else {
+    c = (n+1)/2
+    d <- x[1:c-1]-x[c+1:n]
+  }
+  d<-na.omit(d)
+  s1 <- sum(sign(d)== 1)
+  #s2 <- sum(sign(d)==-1)
+  #s = min(s1,s2)
+  s = s1
+  return(pbinom(s,c,p0))
+}
+
+(p1<-cox_stuart(x))
+```
+
+可知$p-value = `r p1`$在置信水平$\alpha=0.05$下接受零假设，即没有增加趋势
+
+## 3
+
+利用wilcoxon符号秩检验，假设$H_0 : M_0 = 10 \ \   H_1 :M_0 >10 $
+```{r warning=FALSE}
+test1<-wilcox.test(x,10,alt = 'greater')
+(p2<- test1$p.value)
+```
+$p-value = `r p2`$对$\alpha = 0.05$接受零假设
+
+# 2.14
+
+读取数据
+```{r}
+rm(list = ls())
+data <- data <- read.table('U:/SYSU/Non-parametric statistics/data/2.6.14.TXT',sep = ' ')
+x <- unlist(data$V1)
+summary(x)
+y <- unlist(data$V2)
+summary(y)
+```
+同理采用Cox-Stuart趋势检验
+零假设$H_0:$无趋势 , $H_1 :$有增加或减少趋势
+```{r}
+#定义函数双边
+cox_stuart = function(x,p0=0.5){
+  n <- length(x)
+  c = 0
+  d  = NULL
+  if(n%%2==0){
+    c = n/2
+    d<-x[1:c]-x[c+1:n]
+  }else {
+    c = (n+1)/2
+    d <- x[1:c-1]-x[c+1:n]
+  }
+  d<-na.omit(d)
+  s1 <- sum(sign(d)== 1)
+  s2 <- sum(sign(d)==-1)
+  s = min(s1,s2)
+  return(pbinom(s,c,p0))
+}
+
+(p1<-cox_stuart(x))
+(p2<-cox_stuart(y))
+```
+则对于轿车$p = `r p1`$对于置信水平$\alpha =0.05$拒绝零假设，接受备择假设
+对于卡车$p = `r p2`$对于置信水平$\alpha =0.05$接受零假设
+
+# 2.19
+
+由已知有:
+
+\begin{table}
+    \centering
+    \begin{tabular}{|l|l|l|l|l|l|l|l|l|l|l|l|l|l|l|l|l|}
+    \hline
+        秩 &  \multicolumn{16}{|c|}{符号的16种组合}  \\ \hline
+        1 & - & + & - & - & + & - & + & + & - & - & + & + & - & + & - & + \\ \hline
+        2 & - & - & + & - & + & - & - & - & + & + & + & + & - & - & + & + \\ \hline
+        3 & - & - & - & + & - & - & + & - & + & - & + & - & + & + & + & + \\ \hline
+        4 & - & - & - & - & - & + & - & + & - & + & - & + & + & + & + & + \\ \hline
+       $W^+$ & 0 & 1 & 2 & 3 & 3 & 4 & 4 & 5 & 5 & 6 & 6 & 7 & 7 & 8 & 9 & 10 \\ \hline
+        概率 & $\frac{1}{16}$ & $\frac{1}{16}$ &$\frac{1}{16}$  &  $\frac{1}{16}$& $\frac{1}{16}$ & $\frac{1}{16}$ & $\frac{1}{16}$ & $\frac{1}{16}$ & $\frac{1}{16}$ &$\frac{1}{16}$  & $\frac{1}{16}$ &$\frac{1}{16}$  & $\frac{1}{16}$ & $\frac{1}{16}$ &$\frac{1}{16}$  &$\frac{1}{16}$  \\ \hline
+    \end{tabular}
+\end{table}
+
+则可知精确分布为:
+```{r}
+rm(list = ls())
+library(ggplot2)
+data <- data.frame(x = 0:10,y=c(1/16,1/16,1/16,2/16,2/16,2/16,2/16,2/16,1/16,1/16,1/16))
+ggplot(data=data,aes(x=x,y=y))+ geom_col()
+```
+
+# 3.1
+
+## 中位数检验
+读取数据,
+有$H_0:M_A= M_B$,$H_1:M_A>M_B$编写函数有
+```{r}
+rm(list = ls())
+z=read.table("U:/SYSU/Non-parametric statistics/data/3.7.1.TXT",sep = ' ')
+head(z)
+k=unique(z[,2]);
+m=median(z[,1]);
+m1=NULL;
+m2=NULL
+for(i in k){m1=c(m1,sum(z[z[,2]==i,1]>m));
+m2=c(m2,sum(z[z[,2]==i,1]<=m))}
+C=rbind(m1,m2)
+
+test <-fisher.test(C,alt='greater')
+(p<-1-test$p.value)
+```
+
+则可知道，在置信水平$\alpha = 0.05$下有,$p-value = `r p`>\alpha$,不能拒绝零假设，即不能说明A组学生比B组快
+
+## 点估计&区间估计
+
+要获得$\Delta = M_a-M_b$的点估计只需要A,B观测值的所有情况配对相减，然后求中位数即可
+```{r}
+a<-z$V1[which(z$V2 == 1)]
+b<-z$V1[which(z$V2 == 2)]
+m<-length(a)
+n<-length(b)
+(me<-median(outer(a,b,'-')))
+D <- sort(as.vector(outer(a,b,'-')))
+(k<-qwilcox(0.025,m,n))
+```
+则可之所求区间为$(D_k,D_{mn+1-k}) = (`r D[k]`,`r D[n*m+1-k]`)$,点估计为$`r me`$
+
+# 3.11
+
+读取数据
+```{r}
+rm(list = ls())
+z=read.table("U:/SYSU/Non-parametric statistics/data/3.7.11.TXT",sep = ' ')
+head(z)
+summary(z)
+x<-z$V1
+y<-z$V2
+```
+由已知有,该数据为配对二元数据，采用符号检验
+
+设$M_D$为对子间差的中位数，有$H_0:M_D = M_{D_0}$, $H_0:M_D > M_{D_0}$
+```{r}
+wilcox.test(x,y,paired = T,alt = 'greater')
+```
+则可之在置信度为$\alpha = 0.05$下,可以不能拒绝零假设，即不能认为B比A省时间
+
+# 3.15
+
+读取数据
+```{r}
+rm(list = ls())
+z=read.table("U:/SYSU/Non-parametric statistics/data/3.7.15.TXT",sep = ' ')
+head(z)
+summary(z)
+x<-z$V1
+y<-z$V2
+```
+## Wilcoxon符号秩检验
+
+由已知有,该数据为配对二元数据，采用符号检验
+
+设$M_D$为对子间差的中位数，有$H_0:M_D = M_{D_0}$, $H_0:M_D \neq M_{D_0}$
+```{r}
+wilcox.test(x,y,paired = T)
+```
+则可之，在置信度为$\alpha = 0.05$情况下，拒绝零假设，接受备择假设，即二者有显著差别
+
+## 置信区间
+
+由已知有$\Delta = M_x-M_y$则
+```{r}
+m<-length(x)
+n<-length(y)
+D <- sort(as.vector(outer(x,y,'-')))
+(k1<-qwilcox(0.025,m,n))
+(k2<-qwilcox(0.005,m,n))
+```
+则有95%置信区间为$(`r D[k1]`,`r D[n*m+1-k1]`)$,99%置信区间为$(`r D[k2]`,`r D[n*m+1-k2]`)$
+
+若在大样本正态假设下有，构建大样本渐进正态统计量$Z$
+$$Z=\frac{D-\bar{D}}{Var(D)} \sim N(0,1)$$
+```{r}
+qnorm(0.025,mean = mean(D),var(D))
+qnorm(0.005,mean(D),var(D))
+```
+
+则可知，基于正态假设95%置信区间为：$(`r mean(D)-qnorm(0.025,mean = mean(D),var(D))`,`r mean(D)+qnorm(0.025,mean = mean(D),var(D))``)
+99%置信区间为：$(`r mean(D)-qnorm(0.005,mean = mean(D),var(D))`,`r mean(D)+qnorm(0.005,mean = mean(D),var(D))``)\
+
+# 3.16
+
+读取数据,给出的数据有误，根据书上的数据进行修改
+$H_0:\pi_a = \pi_b$,$H_1:\pi_a \neq \pi_b$
+```{r}
+rm(list = ls())
+z=read.table("U:/SYSU/Non-parametric statistics/data/3.7.16.TXT",sep = ' ')
+head(z)
+```
+处理数据
+```{r}
+mcnemar = function(x){
+  n21=sum(x[((x[,1]==0)&(x[,2]==1)),])
+  n12=sum(x[((x[,1]==1)&(x[,2]==0)),])
+  McNemar=(n12-n21)^2/(n12+n21);
+  pvalue=1-pchisq(McNemar,df=1)
+  return(pvalue)
+}
+
+mcnemar(z)
+```
+则可知，在置信度为$\alpha = 0.05$情况下，接受零假设,即没有显著差异
+
+# 3.17
+
+读取数据
+```{r warning=FALSE}
+rm(list = ls())
+z=read.table("U:/SYSU/Non-parametric statistics/data/3.7.17.txt",sep = ' ')
+(w <- matrix(unlist(z),nrow = 4))
+```
+## kappa系数
+
+则有$$\kappa=\frac{p_{a}-p_{e}}{1-p_{e}}$$
+$$p_{a}=\sum_{i=1}^{I} n_{i i} / n, p_{e}=\sum_{i=1}^{I} n_{i+} n_{+i} / n^{2}, n=\sum_{i j} n_{i j}$$
+
+则计算有:
+```{r}
+n<-sum(z)
+w1 = w/n
+pa=sum(diag(w1))
+pe=sum(apply(w1,1,sum)*apply(w1,2,sum))
+(kap=(pa-pe)/(1-pe))
+```
+
+即有kappa系数为`r kap`
+
+## 置信区间
+
+由已知有:
+$$\frac{\hat{\kappa}-\kappa}{\sqrt{\frac{A+B+C}{n(1-p_e)^2}}}\sim N(0,1)$$
+
+其中，$\operatorname{Var}(\kappa)=\frac{n(A+B-C)}{\left(1-p_{e}\right)^{2}}$
+$$\begin{array}{c}
+A=\sum_{i} \frac{n_{i i}}{n}\left(1-\left(\frac{n_{i+}}{n}+\frac{n_{+i}}{n}\right)(1-\kappa)\right)^{2} \\
+B=(1-\kappa)^{2} \sum_{i \neq j} \frac{n_{i j}}{n}\left(\frac{n_{i+}}{n}+\frac{n_{+j}}{n}\right)^{2}, \quad C=\left(\kappa-p_{e}(1-\kappa)\right)^{2} .
+\end{array}$$
+
+则有
+```{r}
+A=sum(diag(w1)*(1-(apply(w1,1,sum)+apply(w1,2,sum))*(1-kap))^2)
+B = 0
+temp1 = apply(w1,1,sum)
+temp2 = apply(w1,2,sum)
+for(i in 1:4){
+  for (j in 1:4){
+    if(i!=j){
+      B = B+w[i,j]/n*(temp1[i]+temp2[j])^2
+    }
+  }
+}
+B = (1-kap)^2*B
+C=(kap-pe*(1-kap))^2
+
+ASE=sqrt((A+B-C)/(1-pe)^2/n)
+(CI=c(kap-qnorm(0.975)*ASE,kap+qnorm(0.975)*ASE))
+```
+
+则可知95%置信区间为$(`r CI[1]` `r CI[2]`)$
